@@ -28,6 +28,9 @@ file(GLOB SOURCES "${SRC_DIR}/*.cpp")
 # 添加头文件目录
 include_directories(${INC_DIR})
 
+# 示例目录
+set(SAMPLE_DIR ${CMAKE_SOURCE_DIR}/sample)
+
 # 创建单元测试可执行文件
 add_executable(unit_test 
     ${SOURCES}
@@ -40,9 +43,16 @@ add_executable(perf_test
     ${TEST_DIR}/PerformanceTest.cpp
 )
 
+# 创建游戏引擎示例可执行文件
+add_executable(game_engine_sample
+    ${SOURCES}
+    ${SAMPLE_DIR}/GameEngineSample.cpp
+)
+
 # 链接线程库
 target_link_libraries(unit_test PRIVATE Threads::Threads)
 target_link_libraries(perf_test PRIVATE Threads::Threads)
+target_link_libraries(game_engine_sample PRIVATE Threads::Threads)
 
 # 添加测试命令（使用生成器表达式获取正确的可执行文件路径，兼容 Windows/Linux）
 add_custom_target(test
