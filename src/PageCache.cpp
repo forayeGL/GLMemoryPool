@@ -25,8 +25,14 @@
  */
 
 #include "../include/PageCache.h"
-#include <sys/mman.h>
 #include <cstring>
+
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <Windows.h>
+#else
+    #include <sys/mman.h>
+#endif
 
 namespace GL_memoryPool
 {
@@ -200,18 +206,21 @@ void PageCache::deallocateSpan(void* ptr, size_t numPages)
 /*
  * systemAlloc —— 向操作系统申请 numPages 页的连续内存
  *
- * 使用 mmap 而非 malloc/new 的原因：
- *   1. mmap 直接向 OS 申请虚拟内存页，返回页对齐的地址，天然满足 PAGE_SIZE 对齐要求
- *   2. 绕过 C 库的堆管理器，避免内存池与标准堆管理器之间的冲突和额外开销
- *   3. MAP_ANONYMOUS 表示不映射任何文件，纯粹用于申请匿名内存
- *   4. MAP_PRIVATE 表示写时复制，内存修改对其他进程不可见
+ * Linux  使用 mmap (MAP_PRIVATE | MAP_ANONYMOUS)，返回页对齐、零初始化的内存
+ * Windows 使用 VirtualAlloc (MEM_COMMIT | MEM_RESERVE)，同样页对齐、零初始化
  *
- * 注意：mmap 在 Linux 下可用，Windows 平台需替换为 VirtualAlloc。
+ * 两者都绕过 C 库堆管理器，直接向 OS 申请虚拟内存页。
  */
 void* PageCache::systemAlloc(size_t numPages)
 {
     size_t size = numPages * PAGE_SIZE;
 
+#ifdef _WIN32
+    // VirtualAlloc 返回页对齐的地址，MEM_COMMIT 会零初始化内存
+    void* ptr = VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!ptr) return nullptr;
+    return ptr;
+#else
     void* ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE,
                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED) return nullptr;
@@ -220,6 +229,7 @@ void* PageCache::systemAlloc(size_t numPages)
     // 此处显式 memset 是防御性编程，确保跨平台一致性
     memset(ptr, 0, size);
     return ptr;
+#endif
 }
 
 } // namespace GL_memoryPool

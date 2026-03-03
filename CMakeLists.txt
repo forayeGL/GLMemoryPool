@@ -5,10 +5,16 @@ project(memory_pool)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 编译选项
-add_compile_options(-Wall -O2)
+# 编译选项：区分编译器
+if(MSVC)
+    add_compile_options(/W4 /utf-8)
+    # /O2 与 Debug 模式的 /RTC1 冲突，仅在 Release 模式下启用优化
+    add_compile_options($<$<CONFIG:Release>:/O2>)
+else()
+    add_compile_options(-Wall -O2)
+endif()
 
-# 查找pthread库
+# 查找pthread库（Windows上 Threads::Threads 自动映射为 Win32 线程）
 find_package(Threads REQUIRED)
 
 # 设置目录
@@ -34,17 +40,17 @@ add_executable(perf_test
     ${TEST_DIR}/PerformanceTest.cpp
 )
 
-# 链接pthread库
+# 链接线程库
 target_link_libraries(unit_test PRIVATE Threads::Threads)
 target_link_libraries(perf_test PRIVATE Threads::Threads)
 
-# 添加测试命令
+# 添加测试命令（使用生成器表达式获取正确的可执行文件路径，兼容 Windows/Linux）
 add_custom_target(test
-    COMMAND ./unit_test
+    COMMAND $<TARGET_FILE:unit_test>
     DEPENDS unit_test
 )
 
 add_custom_target(perf
-    COMMAND ./perf_test
+    COMMAND $<TARGET_FILE:perf_test>
     DEPENDS perf_test
 )

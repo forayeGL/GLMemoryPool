@@ -65,7 +65,7 @@ void testMultiThreading()
     std::cout << "Running multi-threading test..." << std::endl;
 
     const int NUM_THREADS = 4;
-    const int ALLOCS_PER_THREAD = 1000;
+    static constexpr int ALLOCS_PER_THREAD = 1000;
     std::atomic<bool> has_error{false};
     
     auto threadFunc = [&has_error]() 
